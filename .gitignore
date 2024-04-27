@@ -162,4 +162,4 @@ cython_debug/
 # temporary directories
 ./temp_books/
 ./temp_trades/
-.csv.gz
+*.csv.gz
