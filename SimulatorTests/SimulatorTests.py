@@ -71,7 +71,6 @@ class ExchangeTests(unittest.TestCase):
         exchange.cancel_sells()
         fills = exchange.get_fills()
         self.assertEqual(2, len(fills))
-
         self.assertEqual(True, exchange.next_data())
         self.assertEqual(9, exchange.counter)
         fills = exchange.get_fills()
