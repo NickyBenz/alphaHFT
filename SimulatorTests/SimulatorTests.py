@@ -1,6 +1,5 @@
 import unittest
 import pandas as pd
-from Simulator.Order import Order
 from Simulator.Exchange import Exchange
 
 
