@@ -42,7 +42,6 @@ align_mapper = {}
 
 modified_books = [join(temp_book_folder, f)  for f in listdir(temp_book_folder) if isfile(join(temp_book_folder, f))]
 
-
 for book_file in modified_books:
     tokens = os.path.basename(book_file).split("_")
     date_holder = tokens[5]
