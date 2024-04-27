@@ -38,7 +38,6 @@ for filename in trade_files:
     modified_file = trade_parser.parse(filename)
     temporary_trades.append(modified_file)
 
-
 align_mapper = {}
 
 modified_books = [join(temp_book_folder, f)  for f in listdir(temp_book_folder) if isfile(join(temp_book_folder, f))]
