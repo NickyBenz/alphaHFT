@@ -63,7 +63,6 @@ class Exchange:
 
     def process_cancels(self, cancels):
         for order in cancels:
-            del self.quotes[order.order_id]
             order.state = OrderState.CANCELLED
             order.timestamp = self.timestamp
             self.add_to_buffer(order)
@@ -92,7 +91,7 @@ class Exchange:
     def process_pending(self):
         deletions = {}
         for timestamp in self.timed_buffer:
-            if timestamp + pd.Timedelta(1000, unit='ms') >= self.timestamp:
+            if self.timestamp >= timestamp + pd.Timedelta(1000, unit='ms'):
                 for order in self.timed_buffer[timestamp]:
                     if order.state == OrderState.NEW:
                         self.quotes[order.order_id] = order
