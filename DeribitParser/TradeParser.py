@@ -12,34 +12,25 @@ class TradeParser:
 
     def parse(self, filename):
         output_file = self.temp_folder + "modified_" + os.path.basename(filename)
-        header = True
-        write_mode = 'w'
+        trade_df = pd.read_csv(filename, header=0, index_col='local_timestamp', compression="gzip")
+        trade_df.index = pd.to_datetime(trade_df.index, unit="us")
+        modified_df = pd.DataFrame(columns=self.columns)
 
-        for chunk in pd.read_csv(filename, compression="gzip", chunksize=1024):
-            df = pd.DataFrame(columns=self.columns)
+        prev_trade = TradeSnapshot()
+        prev_trade.fill(trade_df.iloc[0], trade_df.index[0])
 
-            if header:
-                prev_trade = TradeSnapshot()
-                prev_trade.fill(chunk.iloc[0])
-                last_trade = prev_trade
+        print("number of trades: ", trade_df.shape[0])
 
-            for row_count in range(1, chunk.shape[0]):
-                curr_trade = TradeSnapshot()
-                curr_trade.fill(chunk.iloc[row_count])
-                if curr_trade.timestamp < prev_trade.timestamp + 500000:
-                    prev_trade.add(curr_trade, 500000)
-                else:
-                    trans = prev_trade.compute(last_trade)
-                    ts = pd.to_datetime(last_trade.timestamp + 500000,
-                                        unit='us', utc=True)
-                    df.loc[ts, self.columns] = trans.flatten()
-                    last_trade = prev_trade
-                    prev_trade = curr_trade
+        for row_count in range(1, trade_df.shape[0]):
+            curr_trade = TradeSnapshot()
+            curr_trade.fill(trade_df.iloc[row_count], trade_df.index[row_count])
+            if curr_trade.timestamp < prev_trade.timestamp + pd.Timedelta(1, unit='s'):
+                prev_trade.add(curr_trade, 1000000)
+            else:
+                trans = curr_trade.compute(prev_trade)
+                modified_df.loc[curr_trade.timestamp, self.columns] = trans.flatten()
+                prev_trade = curr_trade
 
-            df.index.name = 'timestamp'
-            df.to_csv(output_file, compression='gzip',
-                      header=header, mode=write_mode)
-            header = False
-            write_mode = 'a'
+        modified_df.index.name = 'timestamp'
+        modified_df.to_csv(output_file, compression='gzip')
         return output_file
-

@@ -12,7 +12,6 @@ class Snapshot:
         self.bid_cumsum = None
         self.ask_cumsum = None
 
-        self.timestamp = r"local_timestamp"
         self.ask_price_labels = []
         self.bid_price_labels = []
         self.ask_size_labels = []
@@ -24,8 +23,8 @@ class Snapshot:
             self.bid_price_labels.append("bids[{0}].price".format(i))
             self.bid_size_labels.append("bids[{0}].amount".format(i))
 
-    def fill(self, ds):
-        self.timestamp = ds.loc[self.timestamp]
+    def fill(self, ds, idx):
+        self.timestamp = idx
 
         for i in range(5):
             self.bid_prices[i] = ds.loc[self.bid_price_labels[i]]

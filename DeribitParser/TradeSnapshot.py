@@ -1,3 +1,5 @@
+import pandas as pd
+
 from DeribitParser.TradeRecord import TradeRecord
 
 
@@ -9,11 +11,11 @@ class TradeSnapshot:
         self.buy_price = 0
         self.sell_price = 0
 
-    def fill(self, df):
+    def fill(self, df, idx):
         if self.timestamp > 0:
             raise ValueError("Cannot fill a non empty trade")
 
-        self.timestamp = df.loc['local_timestamp']
+        self.timestamp = idx
 
         consideration = df.loc['amount'] * df.loc['price']
         if df.loc['side'] == 'sell':
@@ -26,7 +28,7 @@ class TradeSnapshot:
             self.buy_price = consideration / self.buy_vol
 
     def add(self, curr_trade, time_difference):
-        if self.timestamp == 0 or curr_trade.timestamp > self.timestamp + time_difference:
+        if self.timestamp == 0 or curr_trade.timestamp > self.timestamp + pd.Timedelta(time_difference, unit="us"):
             raise ValueError("Timestamp mismatch in trade aggregation")
 
         consideration = curr_trade.buy_vol * curr_trade.buy_price + self.buy_vol * self.buy_price
@@ -45,6 +47,8 @@ class TradeSnapshot:
         ts = TradeRecord()
         ts.buy_vol_incr = (self.buy_vol - last_trade.buy_vol) / (1. + self.buy_vol + last_trade.buy_vol)
         ts.sell_vol_incr = (self.sell_vol - last_trade.sell_vol) / (1. + self.sell_vol + last_trade.sell_vol)
-        ts.buy_price_incr = (self.buy_price - last_trade.buy_price) / (1. + self.buy_price + last_trade.buy_price)
-        ts.sell_price_incr = (self.sell_price - last_trade.sell_price) / (1. + self.sell_price + last_trade.sell_price)
+        ts.buy_price_incr = (self.buy_price - last_trade.buy_price) / \
+                            (1. + self.buy_price + last_trade.buy_price) * 1000
+        ts.sell_price_incr = (self.sell_price - last_trade.sell_price) / \
+                             (1. + self.sell_price + last_trade.sell_price) * 1000
         return ts
