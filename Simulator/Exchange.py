@@ -21,6 +21,7 @@ class Exchange:
         self.quotes.clear()
         self.executions.clear()
         self.timed_buffer.clear()
+        self.next_data()
 
     def next_data(self):
         if self.counter < self.df.shape[0]:
