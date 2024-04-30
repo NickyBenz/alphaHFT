@@ -18,32 +18,28 @@ class BookParser:
 
     def parse(self, filename):
         output_file = self.temp_folder + "modified_" + os.path.basename(filename)
-        header = True
-        write_mode = 'w'
+        book_df = pd.read_csv(filename, header=0, index_col='local_timestamp', compression="gzip")
+        book_df.index = pd.to_datetime(book_df.index, unit='us')
+        book_df = book_df.resample("1s").last().ffill()
+        modified_df = pd.DataFrame(columns=self.columns)
+        prev_snap = Snapshot()
+        prev_snap.fill(book_df.iloc[0], book_df.index[0])
+        print("number of book records: ", book_df.shape[0])
+        write_header = True
+        write_mode = "w"
 
-        for chunk in pd.read_csv(filename,
-                                 compression="gzip", chunksize=1024):
-            df = pd.DataFrame(columns=self.columns)
+        for rowcount in range(1, book_df.shape[0]):
+            curr_snap = Snapshot()
+            curr_snap.fill(book_df.iloc[rowcount], book_df.index[rowcount])
+            record = curr_snap.compute(prev_snap)
+            modified_df.loc[curr_snap.timestamp, self.columns] = record.flatten()
+            prev_snap = curr_snap
 
-            if header:
-                prev_snap = Snapshot()
-                prev_snap.fill(chunk.iloc[0])
-                last_snap = prev_snap
-
-            for rowcount in range(1, chunk.shape[0]):
-                curr_snap = Snapshot()
-                curr_snap.fill(chunk.iloc[rowcount])
-
-                if curr_snap.timestamp > last_snap.timestamp + 500000:
-                    record = prev_snap.compute(last_snap)
-                    ts = pd.to_datetime(last_snap.timestamp + 500000, unit='us', utc=True)
-                    df.loc[ts, self.columns] = record.flatten()
-                    last_snap = prev_snap
-                prev_snap = curr_snap
-
-            df.index.name = 'timestamp'
-            df.to_csv(output_file, compression='gzip',
-                      header=header, mode=write_mode)
-            header = False
-            write_mode = 'a'
+            if rowcount % 500 == 0 or rowcount == book_df.shape[0] - 1:
+                print("rowcount: ", rowcount)
+                modified_df.index.name = 'timestamp'
+                modified_df.to_csv(output_file, compression='gzip', header=write_header, mode=write_mode)
+                modified_df = pd.DataFrame(columns=self.columns)
+                write_mode = 'a'
+                write_header = False
         return output_file

@@ -21,7 +21,8 @@ class Aligner:
             trade_file = join(self.trade_path, trade_file)
             book_df = pd.read_csv(book_file, header=0, index_col='timestamp')
             trade_df = pd.read_csv(trade_file, header=0, index_col='timestamp')
-            df = book_df.join(trade_df, how="outer")
-            df.fillna(method='ffill', inplace=True)
-            df.fillna(0, inplace=True)
+            df = book_df.join(trade_df, how="outer", sort=True)
+            cols = [str(col) for col in trade_df.columns]
+            df.loc[:, cols] = df.loc[:, cols].ffill()
+            df.dropna(inplace=True)
             df.to_csv(join(output_path, "data_" + date_holder + "_" + symbol))
