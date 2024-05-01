@@ -20,7 +20,7 @@ class Position:
         return {"balance": self.balance,
                 "numOfTrades": self.trade_num,
                 "pnlPct": (self.balance - self.initial_balance) / self.initial_balance * 100.0,
-                "leverage": self.total_qty / self.initial_balance}
+                "leverage": abs(self.total_qty) / self.initial_balance}
 
     def on_fill(self, order: Order, is_maker) -> None:
         assert (order.state == OrderState.FILLED)

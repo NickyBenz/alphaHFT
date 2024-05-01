@@ -60,19 +60,23 @@ class TradeEnv(gym.Env):
         done = self.strategy.quote(quote_buy, quote_sell, buy_ticks, sell_ticks, buy_amount, sell_amount)
         self.info = self.strategy.get_info()
         obs = self.strategy.get_observation()
-        # calculate reward
-        reward = 0
 
-        # calculate truncated based on loss, leverage
-        truncated = self.info["leverage"] < 0.7
-        truncated = self.info["pnlPct"] > -0.02 if not truncated else truncated
+        reward = self.info["pnlPct"]
+        leverage = self.info["leverage"]
+        truncated = not (reward > -0.02 and leverage < 0.8)
 
         if done:
             print("backtest done")
             print(self.info)
-        if truncated:
+            reward *= 10.0
+
+        elif truncated:
             print("backtest truncated")
             print(self.info)
+            if leverage > 0.8:
+                reward = -100
+            else:
+                reward = -1
 
         return obs, reward, done, truncated, self.info
 
