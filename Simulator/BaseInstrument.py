@@ -34,7 +34,7 @@ class BaseInstrument:
         pass
 
     @abstractmethod
-    def fees(self, qty: float, is_maker) -> float:
+    def fees(self, qty: float, price: float, is_maker) -> float:
         if is_maker:
             return abs(qty) * self.maker_fee
         else:

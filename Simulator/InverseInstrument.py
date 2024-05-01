@@ -18,12 +18,12 @@ class InverseInstrument(BaseInstrument):
         return super().get_qty_from_notional(price, notional)
 
     def pnl(self, qty: float, entry_price: float, exit_price: float) -> float:
-        return qty * (1.0 - entry_price / exit_price)
+        return qty * (1.0 - entry_price / exit_price) / exit_price
 
     def equity(self, mid: float, balance: float,
                position: float, avg_price: float,
                fee: float) -> float:
         return super().equity(mid, balance, position, avg_price, fee)
 
-    def fees(self, qty: float, is_maker) -> float:
-        return super().fees(qty, is_maker)
+    def fees(self, qty: float, price: float, is_maker) -> float:
+        return super().fees(qty, price, is_maker) / price

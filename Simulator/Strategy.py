@@ -30,14 +30,16 @@ class Strategy:
             bid_price = ds.loc["bid_price"] - buy_spread * self.instr.tick_size
             bid_amount = self.instr.quote_amount(buy_multiple * self.base_amount,
                                                  bid_price)
-            self.exchange.quote(++self.order_id, True, bid_price, bid_amount)
+            self.order_id += 1
+            self.exchange.quote(self.order_id, True, bid_price, bid_amount)
 
         if quote_sell:
             self.exchange.cancel_sells()
             ask_price = ds.loc["ask_price"] + sell_spread * self.instr.tick_size
             ask_amount = self.instr.quote_amount(sell_multiple * self.base_amount,
                                                  ask_price)
-            self.exchange.quote(++self.order_id, False, ask_price, ask_amount)
+            self.order_id += 1
+            self.exchange.quote(self.order_id, False, ask_price, ask_amount)
 
         done = self.exchange.next_data()
 
@@ -47,8 +49,8 @@ class Strategy:
 
         return done
 
-    def get_info(self):
-        return self.position.get_info()
+    def get_info(self, bid_price, ask_price):
+        return self.position.get_info(bid_price, ask_price)
 
     def get_observation(self):
         return self.exchange.get_current_observation()

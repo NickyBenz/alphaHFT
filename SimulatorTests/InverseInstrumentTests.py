@@ -1,5 +1,4 @@
 import unittest
-import pandas as pd
 from Simulator.InverseInstrument import InverseInstrument
 
 
@@ -24,10 +23,10 @@ class InverseInstrumentTests(unittest.TestCase):
         self.assertEqual(10, amount)
 
     def test_pnl(self):
-        pnl = self.instrument.pnl(0.1, 1000, 2000)
-        self.assertEqual(0.05, pnl)
+        pnl = self.instrument.pnl(2000, 1000, 2000)
+        self.assertEqual(0.5, pnl)
 
-        pnl = self.instrument.pnl(1, 2000, 1000)
+        pnl = self.instrument.pnl(1000, 2000, 1000)
         self.assertEqual(-1, pnl)
 
     def test_qty_from_notional(self):
@@ -37,15 +36,15 @@ class InverseInstrumentTests(unittest.TestCase):
         self.assertEqual(0.01, qty)
 
     def test_fees(self):
-        fees = self.instrument.fees(1, True)
+        fees = self.instrument.fees(1, 1000, True)
         self.assertEqual(0, fees)
 
-        fees = self.instrument.fees(1, False)
+        fees = self.instrument.fees(1000, 1000,False)
         self.assertEqual(0.0005, fees)
 
     def test_equity(self):
-        equity = self.instrument.equity(30000, 33000, -0.05, 32000, 0.001)
-        self.assertAlmostEqual(33000.0023333333334, equity)
+        equity = self.instrument.equity(30000, 1, 15000, 32000, 0.001)
+        self.assertAlmostEqual(0.9656666666666667, equity)
 
 
 if __name__ == '__main__':
