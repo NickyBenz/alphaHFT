@@ -19,13 +19,15 @@ class Strategy:
         self.exchange.reset(start_pos)
         self.position = Position(self.amount, self.instr, 0, 0)
 
-    def quote(self, quote_buy, quote_sell,
+    def quote(self,
               buy_spread: int, sell_spread: int,
-              buy_multiple:int , sell_multiple: int):
+              buy_multiple: int, sell_multiple: int):
 
         ds = self.exchange.get_current_observation()
 
-        if quote_buy:
+        if buy_multiple == 0:
+            self.exchange.cancel_buys()
+        else:
             self.exchange.cancel_buys()
             bid_price = ds.loc["bid_price"] - buy_spread * self.instr.tick_size
             bid_amount = self.instr.quote_amount(buy_multiple * self.base_amount,
@@ -33,7 +35,9 @@ class Strategy:
             self.order_id += 1
             self.exchange.quote(self.order_id, True, bid_price, bid_amount)
 
-        if quote_sell:
+        if sell_multiple == 0:
+            self.exchange.cancel_sells()
+        else:
             self.exchange.cancel_sells()
             ask_price = ds.loc["ask_price"] + sell_spread * self.instr.tick_size
             ask_amount = self.instr.quote_amount(sell_multiple * self.base_amount,

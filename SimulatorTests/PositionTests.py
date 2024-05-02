@@ -47,9 +47,11 @@ class PositionTests(unittest.TestCase):
         self.assertEqual(self.position.trade_num, 2)
         self.assertEqual(self.position.initial_balance, 1)
         info = self.position.get_info(1000, 1000.5)
-        self.assertAlmostEqual(-0.3841132176767581, info["pnlPct"])
+        self.assertAlmostEqual(-0.601962540782075, info["trading_pnl_pct"])
         self.assertAlmostEqual(1.0016835016835017, info["leverage"])
-        self.assertEqual(2, info["numOfTrades"])
+        self.assertEqual(2, info["trade_count"])
+        self.assertAlmostEqual(998.3193277310925, info["avg_price"])
+        self.assertAlmostEqual(0.1929707294653519, info["inventory_pnl_pct"])
         self.assertAlmostEqual(0.9939803745921792, info["balance"])
 
 

@@ -100,7 +100,8 @@ class Exchange:
                         if order.order_id in self.quotes:
                             self.quotes[order.order_id] = order
                     elif order.state == OrderState.CANCELLED:
-                        del self.quotes[order.order_id]
+                        if order.order_id in self.quotes:
+                            del self.quotes[order.order_id]
                     else:
                         assert order.state == OrderState.FILLED
                         self.executions.append(order)

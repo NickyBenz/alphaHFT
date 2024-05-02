@@ -17,16 +17,15 @@ class Position:
         self.avg_price: float = init_avg_price
 
     def get_info(self, bid_price, ask_price):
-        pnl = self.balance - self.initial_balance
-
-        if self.total_qty < 0:
-            pnl += self.instrument.pnl(self.total_qty, self.avg_price, bid_price)
-        elif self.total_qty > 0:
-            pnl += self.instrument.pnl(self.total_qty, self.avg_price, ask_price)
+        trading_pnl = self.balance - self.initial_balance
+        mid_price = 0.5 * (bid_price + ask_price)
+        inventory_pnl = self.instrument.pnl(self.total_qty, self.avg_price, mid_price)
 
         info = {"balance": self.balance,
-                "numOfTrades": self.trade_num,
-                "pnlPct": pnl / self.initial_balance * 100.0}
+                "trade_count": self.trade_num,
+                "avg_price": self.avg_price,
+                "trading_pnl_pct": trading_pnl / self.initial_balance * 100,
+                "inventory_pnl_pct": inventory_pnl / self.initial_balance * 100.0}
 
         if self.total_qty == 0:
             info["leverage"] = 0

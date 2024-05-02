@@ -10,80 +10,116 @@ class TradeEnv(gym.Env):
     def __init__(self, strategy: Strategy, render_mode=None):
         assert strategy is not None
         assert render_mode is None or render_mode in self.metadata["render_modes"]
-
+        self.prev_pnl = 0
+        self.prev_trades = 0
         self.strategy = strategy
         self.info = {}
+        self.steps = 0
+        self.observation_space = spaces.Box(-10.0,
+                                            10.0,
+                                            shape=(38,),
+                                            dtype=np.float32)
 
-        self.observation_space = spaces.Dict(
-            {
-                "book": spaces.Box(low=0,
-                                   high=100000000,
-                                   shape=(2,),
-                                   dtype=np.float32),
-                "features": spaces.Box(-10.0,
-                                       10.0,
-                                       shape=(30,),
-                                       dtype=np.float32)
-            }
-        )
-
-        self.action_space = spaces.MultiDiscrete([1,  # quote buy (y/n)
-                                                  1,  # quote sell (y/n)
-                                                  40,  # buy spread (ticks)
-                                                  40,  # sell spread (ticks)
-                                                  10,  # buy amount multiplier
-                                                  10])  # sell amount multiplier
+        self.action_space = spaces.MultiDiscrete([2,  # quote buy cancel (y/n)
+                                                  2,  # quote sell cancel (y/n)
+                                                  2,  # buy spread (ticks)
+                                                  2,  # sell spread (ticks)
+                                                  2,  # buy amount multiplier
+                                                  2])  # sell amount multiplier
 
     def _get_obs(self):
         obs = self.strategy.get_observation()
-        book = obs[["bid_price", "ask_price"]].values
-        obs.index = obs.index.drop(["bid_price", "ask_price"])
-        return {"book": book, "features": obs.values}
+        info = self.strategy.get_info(obs.loc["bid_price"], obs.loc["ask_price"])
+        trading_pnl = info["trading_pnl_pct"]
+        inventory_pnl = info["inventory_pnl_pct"]
+        book = obs[["bid_price", "ask_price"]]
+        idx = obs.index.drop(["bid_price", "ask_price"])
+        mid_price = 0.5 * (book.loc["bid_price"] + book.loc["ask_price"])
+        avg_price_pct = (info["avg_price"] - mid_price) / mid_price * 1000.0
+        feature_len = obs.loc[idx].values.shape[0]
+        features = np.zeros(feature_len + 4)
+        features[:-4] = obs.loc[idx].values
+        features[-1] = inventory_pnl
+        features[-2] = trading_pnl
+        features[-3] = avg_price_pct
+        features[-4] = info["leverage"] / 10.0
+        return {"book": book, "features": features}
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        start_idx = np.random.randint(low=0, high=10000)
-        self.strategy.reset(start_idx)
+        self.strategy.reset(0)
+        self.steps = 0
+        self.prev_pnl = 0
+        self.prev_trades = 0
         observation = self._get_obs()
-        self.info = self.strategy.get_info()
-        return observation, self.info
+        self.info = self.strategy.get_info(observation['book'].loc['bid_price'],
+                                           observation['book'].loc['ask_price'])
+        return observation['features'], self.info
 
     def step(self, action):
         # take actions
-        quote_buy = action[0] > 0
-        quote_sell = action[1] > 0
-        buy_ticks = action[2]
-        sell_ticks = action[3]
+        self.steps += 1
+        quote_buy_cancel = action[0] > 0
+        quote_sell_cancel = action[1] > 0
+        buy_ticks = action[2] + 2
+        sell_ticks = action[3] + 2
         buy_amount = action[4]
         sell_amount = action[5]
 
-        done = self.strategy.quote(quote_buy, quote_sell, buy_ticks, sell_ticks, buy_amount, sell_amount)
-        self.info = self.strategy.get_info()
-        obs = self.strategy.get_observation()
+        done = not self.strategy.quote(quote_buy_cancel, quote_sell_cancel,
+                                       buy_ticks, sell_ticks,
+                                       buy_amount, sell_amount)
 
-        reward = self.info["pnlPct"]
+        obs = self._get_obs()
+        self.info = self.strategy.get_info(obs['book'].loc['bid_price'],
+                                           obs['book'].loc['ask_price'])
+
+        pnl = self.info["trading_pnl_pct"]
         leverage = self.info["leverage"]
-        truncated = not (reward > -0.02 and leverage < 0.8)
+        trade_num = self.info["trade_count"]
+        truncated = not (pnl > -5 and leverage < 25)
+        inventory_pnl = self.info["inventory_pnl_pct"]
 
         if done:
             print("backtest done")
-            print(self.info)
-            reward *= 10.0
+            reward = pnl - abs(leverage) + min(inventory_pnl, 0)
+
+            if reward == 0:
+                reward = -10
+
+            self.print_info(reward)
 
         elif truncated:
             print("backtest truncated")
-            print(self.info)
-            if leverage > 0.8:
-                reward = -100
+            reward = pnl - abs(leverage) + min(inventory_pnl, 0)
+            self.print_info(reward)
+            done = True
+        else:
+            if trade_num > self.prev_trades:
+                reward = pnl - self.prev_pnl - abs(leverage) + min(inventory_pnl, 0)
+                self.prev_trades = trade_num
+                self.prev_pnl = pnl
             else:
-                reward = -1
+                reward = -abs(leverage) + min(inventory_pnl, 0)
 
-        return obs, reward, done, truncated, self.info
+            if self.steps % 1200 == 0:
+                self.print_info(reward)
+
+        return obs['features'], reward, done, truncated, self.info
+
+    def print_info(self, reward):
+        balance = self.info["balance"]
+        op = {k: round(v, 2) for k, v in self.info.items()}
+        op["reward"] = round(reward, 2)
+        op["balance"] = round(balance, 4)
+        del op["avg_price"]
+        op["steps"] = self.steps
+        print(op)
 
     def render(self):
-        if self.render_mode == "human":
-            if self.strategy.order_id % 20 == 0:
-                print(self.info)
+        pass
+        # print("rendering: ")
+        # print(self.info)
 
     def close(self):
         pass

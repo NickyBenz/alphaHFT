@@ -45,8 +45,8 @@ class StrategyTests(unittest.TestCase):
         info = self.strategy.get_info(ds["bid_price"], ds["ask_price"])
         self.assertEqual(996.5, ds["bid_price"])
         self.assertEqual(997, ds["ask_price"])
-        self.assertAlmostEqual(0.09990007495002534, info["pnlPct"])
+        self.assertAlmostEqual(0.09990007495002534, info["trading_pnl_pct"])
         self.assertAlmostEqual(0, info["leverage"])
-        self.assertEqual(2, info["numOfTrades"])
+        self.assertEqual(2, info["trade_count"])
         self.assertAlmostEqual(0.010009990007495003, info["balance"])
 
