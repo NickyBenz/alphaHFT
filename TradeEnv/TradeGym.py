@@ -13,6 +13,7 @@ class TradeEnv(gym.Env):
         self.prev_pnl = 0
         self.prev_trades = 0
         self.prev_leverage = 0
+        self.prev_inventory_pnl = 0
         self.strategy = strategy
         self.info = {}
         self.steps = 0
@@ -50,6 +51,7 @@ class TradeEnv(gym.Env):
         self.prev_pnl = 0
         self.prev_trades = 0
         self.prev_leverage = 0
+        self.prev_inventory_pnl = 0
         observation = self._get_obs()
         self.info = self.strategy.get_info(observation['book'].loc['bid_price'],
                                            observation['book'].loc['ask_price'])
@@ -91,21 +93,23 @@ class TradeEnv(gym.Env):
 
         elif truncated:
             print("backtest truncated")
-            reward = (pnl - abs(leverage) + min(inventory_pnl, 0)) * 10.0
+            reward = pnl - abs(leverage) + inventory_pnl
             self.print_info(reward)
             done = True
         else:
             lev_change = self.prev_leverage - leverage
             self.prev_leverage = leverage
 
-            if trade_num >= self.prev_trades + 2:
-                reward = pnl - self.prev_pnl + lev_change / 100 + min(inventory_pnl, 0)
+            if trade_num >= self.prev_trades + 8:
+                reward = pnl - self.prev_pnl + lev_change + inventory_pnl - self.prev_inventory_pnl
                 self.prev_trades = trade_num
                 self.prev_pnl = pnl
             else:
-                reward = lev_change + min(inventory_pnl, 0) + min(pnl, 0)
+                reward = lev_change + inventory_pnl - self.prev_inventory_pnl + 5.0 / (leverage - 5.0)
 
-            if self.steps % 1200 == 0:
+            self.prev_inventory_pnl = inventory_pnl
+
+            if self.steps % 300 == 0:
                 self.print_info(reward)
 
         return obs['features'], reward, done, truncated, self.info
