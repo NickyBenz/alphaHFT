@@ -12,6 +12,7 @@ class TradeEnv(gym.Env):
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.prev_pnl = 0
         self.prev_trades = 0
+        self.prev_leverage = 0
         self.strategy = strategy
         self.info = {}
         self.steps = 0
@@ -20,12 +21,9 @@ class TradeEnv(gym.Env):
                                             shape=(38,),
                                             dtype=np.float32)
 
-        self.action_space = spaces.MultiDiscrete([2,  # quote buy cancel (y/n)
-                                                  2,  # quote sell cancel (y/n)
-                                                  2,  # buy spread (ticks)
-                                                  2,  # sell spread (ticks)
-                                                  2,  # buy amount multiplier
-                                                  2])  # sell amount multiplier
+        self.action_space = spaces.Box(low=np.array([-100.0, 1]),
+                                       high=np.array([100.0, 200.0]),
+                                       dtype=np.float32)
 
     def _get_obs(self):
         obs = self.strategy.get_observation()
@@ -51,6 +49,7 @@ class TradeEnv(gym.Env):
         self.steps = 0
         self.prev_pnl = 0
         self.prev_trades = 0
+        self.prev_leverage = 0
         observation = self._get_obs()
         self.info = self.strategy.get_info(observation['book'].loc['bid_price'],
                                            observation['book'].loc['ask_price'])
@@ -59,26 +58,27 @@ class TradeEnv(gym.Env):
     def step(self, action):
         # take actions
         self.steps += 1
-        quote_buy_cancel = action[0] > 0
-        quote_sell_cancel = action[1] > 0
-        buy_ticks = action[2] + 2
-        sell_ticks = action[3] + 2
-        buy_amount = action[4]
-        sell_amount = action[5]
-
-        done = not self.strategy.quote(quote_buy_cancel, quote_sell_cancel,
-                                       buy_ticks, sell_ticks,
-                                       buy_amount, sell_amount)
-
+        reserve_spread = action[0]
+        tick_spread = action[1]
         obs = self._get_obs()
-        self.info = self.strategy.get_info(obs['book'].loc['bid_price'],
-                                           obs['book'].loc['ask_price'])
+        bid_price = obs['book'].loc['bid_price']
+        ask_price = obs['book'].loc['ask_price']
+        mid_price = 0.5 * (bid_price + ask_price)
+        reserve_price = mid_price + reserve_spread
+        buy_price = reserve_price - tick_spread
+        sell_price = reserve_price + tick_spread
+        buy_ticks = max(int(round((bid_price - buy_price) / 0.5)), 1)
+        sell_ticks = max(int(round((sell_price - ask_price) / 0.5)), 1)
+        done = not self.strategy.quote(buy_ticks, sell_ticks,
+                                       1, 1)
+
+        self.info = self.strategy.get_info(bid_price, ask_price)
 
         pnl = self.info["trading_pnl_pct"]
+        inventory_pnl = self.info["inventory_pnl_pct"]
         leverage = self.info["leverage"]
         trade_num = self.info["trade_count"]
-        truncated = not (pnl > -5 and leverage < 25)
-        inventory_pnl = self.info["inventory_pnl_pct"]
+        truncated = not (pnl + min(0, inventory_pnl) > -1 and leverage < 5)
 
         if done:
             print("backtest done")
@@ -91,16 +91,19 @@ class TradeEnv(gym.Env):
 
         elif truncated:
             print("backtest truncated")
-            reward = pnl - abs(leverage) + min(inventory_pnl, 0)
+            reward = (pnl - abs(leverage) + min(inventory_pnl, 0)) * 10.0
             self.print_info(reward)
             done = True
         else:
-            if trade_num > self.prev_trades:
-                reward = pnl - self.prev_pnl - abs(leverage) + min(inventory_pnl, 0)
+            lev_change = self.prev_leverage - leverage
+            self.prev_leverage = leverage
+
+            if trade_num >= self.prev_trades + 2:
+                reward = pnl - self.prev_pnl + lev_change / 100 + min(inventory_pnl, 0)
                 self.prev_trades = trade_num
                 self.prev_pnl = pnl
             else:
-                reward = -abs(leverage) + min(inventory_pnl, 0)
+                reward = lev_change + min(inventory_pnl, 0) + min(pnl, 0)
 
             if self.steps % 1200 == 0:
                 self.print_info(reward)
