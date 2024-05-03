@@ -80,7 +80,7 @@ class TradeEnv(gym.Env):
         inventory_pnl = self.info["inventory_pnl_pct"]
         leverage = self.info["leverage"]
         trade_num = self.info["trade_count"]
-        truncated = not (pnl + min(0, inventory_pnl) > -1 and leverage < 5)
+        truncated = not (pnl + min(0, inventory_pnl) > -1 and leverage < 1)
 
         if done:
             print("backtest done")
@@ -93,21 +93,19 @@ class TradeEnv(gym.Env):
 
         elif truncated:
             print("backtest truncated")
-            reward = pnl - abs(leverage) + inventory_pnl
+            reward = pnl - abs(leverage) + min(inventory_pnl, 0)
             self.print_info(reward)
             done = True
         else:
             lev_change = self.prev_leverage - leverage
+            reward = lev_change + inventory_pnl - self.prev_inventory_pnl - 2.0 / abs(leverage - 1.0)
             self.prev_leverage = leverage
+            self.prev_inventory_pnl = inventory_pnl
 
-            if trade_num >= self.prev_trades + 8:
-                reward = pnl - self.prev_pnl + lev_change + inventory_pnl - self.prev_inventory_pnl
+            if trade_num >= self.prev_trades + 1:
+                reward += (pnl - self.prev_pnl) * 10.0
                 self.prev_trades = trade_num
                 self.prev_pnl = pnl
-            else:
-                reward = lev_change + inventory_pnl - self.prev_inventory_pnl + 5.0 / (leverage - 5.0)
-
-            self.prev_inventory_pnl = inventory_pnl
 
             if self.steps % 300 == 0:
                 self.print_info(reward)
