@@ -25,25 +25,25 @@ class Strategy:
 
         ds = self.exchange.get_current_observation()
 
-        if buy_multiple == 0:
-            self.exchange.cancel_buys()
-        else:
+        if buy_multiple == 1:
             self.exchange.cancel_buys()
             bid_price = ds.loc["bid_price"] - buy_spread * self.instr.tick_size
             bid_amount = self.instr.quote_amount(buy_multiple * self.base_amount,
                                                  bid_price)
             self.order_id += 1
             self.exchange.quote(self.order_id, True, bid_price, bid_amount)
+        elif buy_multiple == 2:
+            self.exchange.cancel_buys()
 
-        if sell_multiple == 0:
-            self.exchange.cancel_sells()
-        else:
+        if sell_multiple == 1:
             self.exchange.cancel_sells()
             ask_price = ds.loc["ask_price"] + sell_spread * self.instr.tick_size
             ask_amount = self.instr.quote_amount(sell_multiple * self.base_amount,
                                                  ask_price)
             self.order_id += 1
             self.exchange.quote(self.order_id, False, ask_price, ask_amount)
+        elif sell_multiple == 2:
+            self.exchange.cancel_sells()
 
         done = self.exchange.next_data()
 

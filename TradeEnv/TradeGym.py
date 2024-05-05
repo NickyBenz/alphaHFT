@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
@@ -17,14 +18,28 @@ class TradeEnv(gym.Env):
         self.strategy = strategy
         self.info = {}
         self.steps = 0
+        self.prev_features = None
         self.observation_space = spaces.Box(-10.0,
                                             10.0,
-                                            shape=(38,),
+                                            shape=(60, 38),
                                             dtype=np.float32)
 
-        self.action_space = spaces.Box(low=np.array([-100.0, 1]),
-                                       high=np.array([100.0, 200.0]),
-                                       dtype=np.float32)
+        self.action_space = spaces.MultiDiscrete([3, 3])
+
+    def get_final_obs(self):
+        features = np.zeros((60, 38))
+        if self.prev_features is None:
+            for i in range(59):
+                obs = self._get_obs()
+                features[i, :] = obs['features']
+        else:
+            features[:-1, :] = self.prev_features[1:, :]
+
+        obs = self._get_obs()
+        features[-1, :] = obs['features']
+        obs['features'] = features
+        self.prev_features = features
+        return obs
 
     def _get_obs(self):
         obs = self.strategy.get_observation()
@@ -52,7 +67,9 @@ class TradeEnv(gym.Env):
         self.prev_trades = 0
         self.prev_leverage = 0
         self.prev_inventory_pnl = 0
-        observation = self._get_obs()
+        self.prev_features = None
+
+        observation = self.get_final_obs()
         self.info = self.strategy.get_info(observation['book'].loc['bid_price'],
                                            observation['book'].loc['ask_price'])
         return observation['features'], self.info
@@ -60,19 +77,14 @@ class TradeEnv(gym.Env):
     def step(self, action):
         # take actions
         self.steps += 1
-        reserve_spread = action[0]
-        tick_spread = action[1]
-        obs = self._get_obs()
+        buy_multiplier = action[0]  # 0 - dont change, 1 - re quote, 2 - cancel
+        sell_multiplier = action[1]  # 0 - dont change, 1 - re quote, 2 - cancel
+        buy_ticks = 1  # action[2] + 1
+        sell_ticks = 1  # action[3] + 1
+        obs = self.get_final_obs()
         bid_price = obs['book'].loc['bid_price']
         ask_price = obs['book'].loc['ask_price']
-        mid_price = 0.5 * (bid_price + ask_price)
-        reserve_price = mid_price + reserve_spread
-        buy_price = reserve_price - tick_spread
-        sell_price = reserve_price + tick_spread
-        buy_ticks = max(int(round((bid_price - buy_price) / 0.5)), 1)
-        sell_ticks = max(int(round((sell_price - ask_price) / 0.5)), 1)
-        done = not self.strategy.quote(buy_ticks, sell_ticks,
-                                       1, 1)
+        done = not self.strategy.quote(buy_ticks, sell_ticks, buy_multiplier, sell_multiplier)
 
         self.info = self.strategy.get_info(bid_price, ask_price)
 
@@ -80,40 +92,42 @@ class TradeEnv(gym.Env):
         inventory_pnl = self.info["inventory_pnl_pct"]
         leverage = self.info["leverage"]
         trade_num = self.info["trade_count"]
-        truncated = not (pnl + min(0, inventory_pnl) > -1 and leverage < 1)
+        truncated = not (pnl + min(0, inventory_pnl) > -3 and leverage < 10)
+
+        leverage_punish = 1 - math.pow(2, leverage)
+        trade_intensity = trade_num / self.steps
+        reward = min(trade_intensity - 0.01, 0) if self.steps > 300 else 0
 
         if done:
             print("backtest done")
-            reward = pnl - abs(leverage) + min(inventory_pnl, 0)
+            reward += pnl + inventory_pnl - leverage_punish * 0.0001
+            if trade_num / self.steps < 0.005:
+                reward -= 1
             self.print_info(reward)
         elif truncated:
             print("backtest truncated")
-            reward = pnl - abs(leverage) + min(inventory_pnl, 0)
+            reward -= 100
             self.print_info(reward)
             done = True
         else:
-            lev_change = self.prev_leverage - leverage
-            inventory_pnl_change = inventory_pnl - self.prev_inventory_pnl
-            leverage_punish = 1 - 3.0 / (3.0 - leverage)
-            reward = lev_change + inventory_pnl_change + leverage_punish
+            reward += min(0, inventory_pnl) + leverage_punish * 0.001
             self.prev_leverage = leverage
             self.prev_inventory_pnl = inventory_pnl
 
-            if trade_num >= self.prev_trades + 1:
-                reward += (pnl - self.prev_pnl) * 10.0
+            if trade_num > self.prev_trades + 4:
+                reward += pnl - self.prev_pnl
                 self.prev_trades = trade_num
                 self.prev_pnl = pnl
 
-            if self.steps % 300 == 0:
+            if self.steps % 600 == 0:
                 self.print_info(reward)
 
         return obs['features'], reward, done, truncated, self.info
 
     def print_info(self, reward):
-        balance = self.info["balance"]
         op = {k: round(v, 2) for k, v in self.info.items()}
         op["reward"] = round(reward, 2)
-        op["balance"] = round(balance, 4)
+        del op['balance']
         del op["avg_price"]
         op["steps"] = self.steps
         print(op)

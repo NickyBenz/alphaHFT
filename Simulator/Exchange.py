@@ -95,7 +95,12 @@ class Exchange:
             if self.timestamp >= timestamp + pd.Timedelta(1000, unit='ms'):
                 for order in self.timed_buffer[timestamp]:
                     if order.state == OrderState.NEW:
-                        self.quotes[order.order_id] = order
+                        if order.is_buy:
+                            if order.price <= self.ds.loc["bid_price"]:
+                                self.quotes[order.order_id] = order
+                        else:
+                            if order.price >= self.ds.loc["ask_price"]:
+                                self.quotes[order.order_id] = order
                     elif order.state == OrderState.AMEND:
                         if order.order_id in self.quotes:
                             self.quotes[order.order_id] = order
