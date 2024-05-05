@@ -92,7 +92,7 @@ class TradeEnv(gym.Env):
         inventory_pnl = self.info["inventory_pnl_pct"]
         leverage = self.info["leverage"]
         trade_num = self.info["trade_count"]
-        truncated = not (pnl + min(0, inventory_pnl) > -3 and leverage < 50)
+        truncated = not (pnl + min(0, inventory_pnl) > -10 and leverage < 50)
 
         leverage_punish = 1 - math.pow(2, leverage)
         trade_intensity = trade_num / self.steps
