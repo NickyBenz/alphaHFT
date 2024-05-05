@@ -69,7 +69,7 @@ class TradeEnv(gym.Env):
         self.prev_inventory_pnl = 0
         self.prev_features = None
 
-        observation = self.get_final_obs()
+        observation = self._get_obs()
         self.info = self.strategy.get_info(observation['book'].loc['bid_price'],
                                            observation['book'].loc['ask_price'])
         return observation['features'], self.info
@@ -81,7 +81,7 @@ class TradeEnv(gym.Env):
         sell_multiplier = action[1]  # 0 - dont change, 1 - re quote, 2 - cancel
         buy_ticks = 1  # action[2] + 1
         sell_ticks = 1  # action[3] + 1
-        obs = self.get_final_obs()
+        obs = self._get_obs()
         bid_price = obs['book'].loc['bid_price']
         ask_price = obs['book'].loc['ask_price']
         done = not self.strategy.quote(buy_ticks, sell_ticks, buy_multiplier, sell_multiplier)
