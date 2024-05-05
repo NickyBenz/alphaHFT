@@ -114,7 +114,7 @@ class TradeEnv(gym.Env):
             self.prev_leverage = leverage
             self.prev_inventory_pnl = inventory_pnl
 
-            if trade_num > self.prev_trades + 8:
+            if trade_num > self.prev_trades + 1:
                 reward += pnl - self.prev_pnl
                 self.prev_trades = trade_num
                 self.prev_pnl = pnl
