@@ -119,7 +119,7 @@ class TradeEnv(gym.Env):
                 self.prev_trades = trade_num
                 self.prev_pnl = pnl
 
-            if self.steps % 600 == 0:
+            if self.steps % 10800 == 0:
                 self.print_info(reward)
 
         return obs['features'], reward, done, truncated, self.info
