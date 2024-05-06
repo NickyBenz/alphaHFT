@@ -29,7 +29,7 @@ class Strategy:
             self.exchange.cancel_buys()
             bid_price = ds.loc["bid_price"] - buy_spread * self.instr.tick_size
 
-            if buy_multiple == 1 or self.position.total_qty // self.base_amount <= 0:
+            if buy_multiple == 1 or self.position.total_qty >= 0:
                 bid_amount = self.instr.quote_amount(buy_multiple * self.base_amount,
                                                      bid_price)
             else:
@@ -44,7 +44,7 @@ class Strategy:
             self.exchange.cancel_sells()
             ask_price = ds.loc["ask_price"] + sell_spread * self.instr.tick_size
 
-            if sell_multiple == 1 or self.position.total_qty // self.base_amount >= 0:
+            if sell_multiple == 1 or self.position.total_qty <= 0:
                 ask_amount = self.instr.quote_amount(sell_multiple * self.base_amount,
                                                      ask_price)
             else:
