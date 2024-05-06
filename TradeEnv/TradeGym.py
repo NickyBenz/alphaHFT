@@ -11,12 +11,8 @@ class TradeEnv(gym.Env):
     def __init__(self, strategy: Strategy, verbose=1200, render_mode=None):
         assert strategy is not None
         assert render_mode is None or render_mode in self.metadata["render_modes"]
-        self.prev_pnl = 0
-        self.interval_pnl = np.zeros(1800)
+        self.interval_pnl = np.zeros(600)
         self.verbose = verbose
-        self.prev_trades = 0
-        self.prev_leverage = 0
-        self.prev_inventory_pnl = 0
         self.strategy = strategy
         self.info = {}
         self.steps = 0
@@ -65,12 +61,8 @@ class TradeEnv(gym.Env):
         super().reset(seed=seed)
         self.strategy.reset(0)
         self.steps = 0
-        self.prev_pnl = 0
-        self.prev_trades = 0
-        self.prev_leverage = 0
-        self.prev_inventory_pnl = 0
         self.prev_features = None
-        self.interval_pnl = np.zeros(1800)
+        self.interval_pnl[:] = 0
 
         observation = self.get_final_obs()
         self.info = self.strategy.get_info(observation['book'].loc['bid_price'],
@@ -114,13 +106,6 @@ class TradeEnv(gym.Env):
             self.print_info(reward)
         else:
             reward += leverage_punish * 0.005 + min(inventory_pnl, 0)
-            self.prev_leverage = leverage
-            self.prev_inventory_pnl = inventory_pnl
-
-            if trade_num > self.prev_trades + 1:
-                reward += pnl - self.prev_pnl
-                self.prev_trades = trade_num
-                self.prev_pnl = pnl
 
             if self.steps % self.verbose == 0:
                 self.print_info(reward)
