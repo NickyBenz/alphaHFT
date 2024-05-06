@@ -12,6 +12,7 @@ class TradeEnv(gym.Env):
         assert strategy is not None
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.prev_pnl = 0
+        self.interval_pnl = np.zeros(1800)
         self.verbose = verbose
         self.prev_trades = 0
         self.prev_leverage = 0
@@ -22,15 +23,15 @@ class TradeEnv(gym.Env):
         self.prev_features = None
         self.observation_space = spaces.Box(-10.0,
                                             10.0,
-                                            shape=(30, 38),
+                                            shape=(120, 38),
                                             dtype=np.float32)
 
         self.action_space = spaces.MultiDiscrete([4, 4])
 
     def get_final_obs(self):
-        features = np.zeros((30, 38))
+        features = np.zeros((120, 38))
         if self.prev_features is None:
-            for i in range(29):
+            for i in range(119):
                 obs = self._get_obs()
                 features[i, :] = obs['features']
         else:
@@ -55,7 +56,7 @@ class TradeEnv(gym.Env):
         features = np.zeros(feature_len + 4)
         features[:-4] = obs.loc[idx].values
         features[-1] = inventory_pnl / 100.0
-        features[-2] = (trading_pnl - self.prev_pnl) / 10.0
+        features[-2] = trading_pnl / 100.0
         features[-3] = avg_price_pct
         features[-4] = info["leverage"] / 100.0
         return {"book": book, "features": features}
@@ -69,6 +70,7 @@ class TradeEnv(gym.Env):
         self.prev_leverage = 0
         self.prev_inventory_pnl = 0
         self.prev_features = None
+        self.interval_pnl = np.zeros(1800)
 
         observation = self.get_final_obs()
         self.info = self.strategy.get_info(observation['book'].loc['bid_price'],
@@ -93,13 +95,16 @@ class TradeEnv(gym.Env):
         inventory_pnl = self.info["inventory_pnl_pct"]
         leverage = self.info["leverage"]
         trade_num = self.info["trade_count"]
-        done = done or not (pnl + min(0, inventory_pnl) > -10 and leverage < 50)
+        done = done or (pnl + inventory_pnl) < -10 or leverage > 15
         leverage_punish = 1 - math.pow(2, leverage)
+        reward = pnl + inventory_pnl
 
-        reward = (pnl + min(inventory_pnl, 0) - 1) * self.steps / 7200
-
-        if reward < 0 < self.steps // 7200 and self.steps % 7200 == 0:
-            done = True
+        if self.steps <= 1800:
+            self.interval_pnl[self.steps-1] = reward
+        else:
+            reward -= self.interval_pnl[0]
+            self.interval_pnl[:-1] = self.interval_pnl[1:]
+            self.interval_pnl[-1] = reward
 
         if done:
             print("backtest done")
