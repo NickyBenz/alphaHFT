@@ -98,11 +98,12 @@ class TradeEnv(gym.Env):
             self.interval_pnl[:-1] = self.interval_pnl[1:]
             self.interval_pnl[-1] = reward
 
+        if trade_num / self.steps < 0.005:
+            reward -= self.steps / (trade_num + 1)
+
         if done:
             print("backtest done")
             reward = 10 * reward + leverage_punish * 0.05
-            if trade_num / self.steps < 0.005:
-                reward -= self.steps / (trade_num + 1)
             self.print_info(reward)
         else:
             reward += leverage_punish * 0.005 + min(inventory_pnl, 0)
