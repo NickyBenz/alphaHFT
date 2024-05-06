@@ -25,21 +25,31 @@ class Strategy:
 
         ds = self.exchange.get_current_observation()
 
-        if buy_multiple == 1:
+        if buy_multiple == 1 or buy_multiple == 3:
             self.exchange.cancel_buys()
             bid_price = ds.loc["bid_price"] - buy_spread * self.instr.tick_size
-            bid_amount = self.instr.quote_amount(buy_multiple * self.base_amount,
-                                                 bid_price)
+
+            if buy_multiple == 1 or self.position.total_qty // self.base_amount <= 0:
+                bid_amount = self.instr.quote_amount(buy_multiple * self.base_amount,
+                                                     bid_price)
+            else:
+                bid_amount = self.instr.quote_amount(self.position.total_qty, bid_price)
+
             self.order_id += 1
             self.exchange.quote(self.order_id, True, bid_price, bid_amount)
         elif buy_multiple == 2:
             self.exchange.cancel_buys()
 
-        if sell_multiple == 1:
+        if sell_multiple == 1 or sell_multiple == 3:
             self.exchange.cancel_sells()
             ask_price = ds.loc["ask_price"] + sell_spread * self.instr.tick_size
-            ask_amount = self.instr.quote_amount(sell_multiple * self.base_amount,
-                                                 ask_price)
+
+            if sell_multiple == 1 or self.position.total_qty // self.base_amount >= 0:
+                ask_amount = self.instr.quote_amount(sell_multiple * self.base_amount,
+                                                     ask_price)
+            else:
+                ask_amount = self.instr.quote_amount(self.position.total_qty, ask_price)
+
             self.order_id += 1
             self.exchange.quote(self.order_id, False, ask_price, ask_amount)
         elif sell_multiple == 2:
