@@ -33,7 +33,7 @@ class Strategy:
                 bid_amount = self.instr.quote_amount(buy_multiple * self.base_amount,
                                                      bid_price)
             else:
-                bid_amount = self.instr.quote_amount(self.position.total_qty / bid_price, bid_price)
+                bid_amount = self.instr.quote_amount(abs(self.position.total_qty) / bid_price, bid_price)
 
             self.order_id += 1
             self.exchange.quote(self.order_id, True, bid_price, bid_amount)
@@ -48,7 +48,7 @@ class Strategy:
                 ask_amount = self.instr.quote_amount(sell_multiple * self.base_amount,
                                                      ask_price)
             else:
-                ask_amount = self.instr.quote_amount(self.position.total_qty / ask_price, ask_price)
+                ask_amount = self.instr.quote_amount(abs(self.position.total_qty) / ask_price, ask_price)
 
             self.order_id += 1
             self.exchange.quote(self.order_id, False, ask_price, ask_amount)
