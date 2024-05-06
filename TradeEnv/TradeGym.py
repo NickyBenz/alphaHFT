@@ -95,8 +95,7 @@ class TradeEnv(gym.Env):
         truncated = not (pnl + min(0, inventory_pnl) > -10 and leverage < 50)
 
         leverage_punish = 1 - math.pow(2, leverage)
-        trade_intensity = trade_num / self.steps
-        reward = min(trade_intensity - 0.01, 0) if self.steps > 300 else 0
+        reward = (pnl - abs(inventory_pnl)) * self.steps / 3600 - 0.5
 
         if done:
             print("backtest done")
