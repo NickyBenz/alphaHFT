@@ -89,16 +89,17 @@ class TradeEnv(gym.Env):
         trade_num = self.info["trade_count"]
         done = done or (pnl + inventory_pnl) < -10 or leverage > 15
         leverage_punish = 1 - math.pow(2, leverage)
-        reward = pnl - abs(inventory_pnl)
+        reward = pnl + min(inventory_pnl, 0)
 
         if self.steps <= 60:
             self.interval_pnl[self.steps-1] = reward
         else:
-            reward -= self.interval_pnl[0]
+            sum_reward = self.interval_pnl.mean()
             self.interval_pnl[:-1] = self.interval_pnl[1:]
             self.interval_pnl[-1] = reward
+            reward = sum_reward
 
-        if trade_num / self.steps < 0.005:
+        if trade_num / self.steps < 0.01 and self.steps > 300:
             reward -= self.steps / (trade_num + 1)
 
         if done:
@@ -108,8 +109,6 @@ class TradeEnv(gym.Env):
         else:
             reward += leverage_punish * 0.005
 
-            if self.steps > 600:
-                reward += (0.01 - trade_num / self.steps)
             if self.steps % self.verbose == 0:
                 self.print_info(reward)
 
