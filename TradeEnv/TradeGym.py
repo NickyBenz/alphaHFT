@@ -8,10 +8,11 @@ from Simulator.Strategy import Strategy
 class TradeEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
 
-    def __init__(self, strategy: Strategy, render_mode=None):
+    def __init__(self, strategy: Strategy, verbose=1200, render_mode=None):
         assert strategy is not None
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.prev_pnl = 0
+        self.verbose = verbose
         self.prev_trades = 0
         self.prev_leverage = 0
         self.prev_inventory_pnl = 0
@@ -118,7 +119,7 @@ class TradeEnv(gym.Env):
             else:
                 reward = 0
 
-            if self.steps % 1200 == 0:
+            if self.steps % self.verbose == 0:
                 self.print_info(reward)
 
         return obs['features'], reward, done, False, self.info
