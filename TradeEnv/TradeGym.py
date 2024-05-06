@@ -99,9 +99,6 @@ class TradeEnv(gym.Env):
             self.interval_pnl[-1] = reward
             reward = sum_reward
 
-        if trade_num / self.steps < 0.01 and self.steps > 300:
-            reward -= self.steps / (trade_num + 1)
-
         if done:
             print("backtest done")
             reward = 10 * reward + leverage_punish * 0.005
