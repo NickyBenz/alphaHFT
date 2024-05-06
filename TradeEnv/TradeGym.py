@@ -126,7 +126,7 @@ class TradeEnv(gym.Env):
 
     def print_info(self, reward):
         op = {k: round(v, 2) for k, v in self.info.items()}
-        op["reward"] = round(reward, 2)
+        op["reward"] = round(reward, 6)
         del op['balance']
         del op["avg_price"]
         op["steps"] = self.steps
