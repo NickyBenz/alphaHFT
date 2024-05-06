@@ -97,7 +97,7 @@ class TradeEnv(gym.Env):
         leverage_punish = 1 - math.pow(2, leverage)
         reward = (pnl - abs(inventory_pnl) - 0.1) * self.steps / 3600
 
-        if reward < 0 < self.steps // 3600 and self.steps % 3600 == 0:
+        if reward < 0 < self.steps // 14400 and self.steps % 14400 == 0:
             done = True
 
         if done:
