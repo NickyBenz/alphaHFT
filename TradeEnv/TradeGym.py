@@ -115,6 +115,8 @@ class TradeEnv(gym.Env):
                 reward += pnl - self.prev_pnl
                 self.prev_trades = trade_num
                 self.prev_pnl = pnl
+            else:
+                reward = 0
 
             if self.steps % 1200 == 0:
                 self.print_info(reward)
