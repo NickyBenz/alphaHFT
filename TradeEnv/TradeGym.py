@@ -94,12 +94,7 @@ class TradeEnv(gym.Env):
         leverage = self.info["leverage"]
         trade_num = self.info["trade_count"]
         done = done or not (pnl + min(0, inventory_pnl) > -10 and leverage < 50)
-        leverage_punish = 0
-
-        try:
-            leverage_punish = 1 - math.pow(2, leverage)
-        except Exception as e:
-            print(e, leverage, self.strategy.position.total_qty)
+        leverage_punish = 1 - math.pow(2, leverage)
 
         reward = (pnl + min(inventory_pnl, 0) - 1) * self.steps / 7200
 
