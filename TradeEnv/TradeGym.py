@@ -92,7 +92,7 @@ class TradeEnv(gym.Env):
         inventory_pnl = self.info["inventory_pnl_pct"]
         leverage = self.info["leverage"]
         trade_num = self.info["trade_count"]
-        truncated = not (pnl + min(0, inventory_pnl) > -10 and leverage < 50)
+        done = done or not (pnl + min(0, inventory_pnl) > -10 and leverage < 50)
 
         leverage_punish = 1 - math.pow(2, leverage)
         reward = (pnl + min(inventory_pnl, 0) - 0.025) * self.steps / 1800
@@ -102,21 +102,16 @@ class TradeEnv(gym.Env):
 
         if done:
             print("backtest done")
-            reward = 10 * (pnl - abs(inventory_pnl)) + leverage_punish * 0.005
+            reward = 100 * (pnl - abs(inventory_pnl)) + leverage_punish * 0.05
             if trade_num / self.steps < 0.005:
                 reward -= self.steps / (trade_num + 1)
             self.print_info(reward)
-        elif truncated:
-            print("backtest truncated")
-            reward = 10 * (pnl - abs(inventory_pnl)) + leverage_punish * 0.005
-            self.print_info(reward)
-            done = True
         else:
             reward += leverage_punish * 0.005 + min(inventory_pnl, 0)
             self.prev_leverage = leverage
             self.prev_inventory_pnl = inventory_pnl
 
-            if trade_num > self.prev_trades + 4:
+            if trade_num > self.prev_trades + 1:
                 reward += pnl - self.prev_pnl
                 self.prev_trades = trade_num
                 self.prev_pnl = pnl
@@ -124,7 +119,7 @@ class TradeEnv(gym.Env):
             if self.steps % 1200 == 0:
                 self.print_info(reward)
 
-        return obs['features'], reward, done, truncated, self.info
+        return obs['features'], reward, done, False, self.info
 
     def print_info(self, reward):
         op = {k: round(v, 2) for k, v in self.info.items()}
