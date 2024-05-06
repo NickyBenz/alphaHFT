@@ -11,7 +11,7 @@ class TradeEnv(gym.Env):
     def __init__(self, strategy: Strategy, verbose=1200, render_mode=None):
         assert strategy is not None
         assert render_mode is None or render_mode in self.metadata["render_modes"]
-        self.interval_pnl = np.zeros(600)
+        self.interval_pnl = np.zeros(60)
         self.verbose = verbose
         self.strategy = strategy
         self.info = {}
@@ -91,7 +91,7 @@ class TradeEnv(gym.Env):
         leverage_punish = 1 - math.pow(2, leverage)
         reward = pnl + inventory_pnl
 
-        if self.steps <= 600:
+        if self.steps <= 60:
             self.interval_pnl[self.steps-1] = reward
         else:
             reward -= self.interval_pnl[0] + 0.2
@@ -106,7 +106,7 @@ class TradeEnv(gym.Env):
             reward = 10 * reward + leverage_punish * 0.05
             self.print_info(reward)
         else:
-            reward = 0
+            reward += leverage_punish * 0.0005
 
             if self.steps % self.verbose == 0:
                 self.print_info(reward)
