@@ -106,7 +106,7 @@ class TradeEnv(gym.Env):
             reward = 10 * reward + leverage_punish * 0.05
             self.print_info(reward)
         else:
-            reward += leverage_punish * 0.005 + min(inventory_pnl, 0)
+            reward += leverage_punish * 0.005
 
             if self.steps % self.verbose == 0:
                 self.print_info(reward)
