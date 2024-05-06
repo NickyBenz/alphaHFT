@@ -91,7 +91,7 @@ class TradeEnv(gym.Env):
         leverage_punish = 1 - math.pow(2, leverage)
         reward = pnl + inventory_pnl
 
-        if self.steps <= 1800:
+        if self.steps <= 600:
             self.interval_pnl[self.steps-1] = reward
         else:
             reward -= self.interval_pnl[0] + 1
