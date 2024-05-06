@@ -21,15 +21,15 @@ class TradeEnv(gym.Env):
         self.prev_features = None
         self.observation_space = spaces.Box(-10.0,
                                             10.0,
-                                            shape=(60, 38),
+                                            shape=(180, 38),
                                             dtype=np.float32)
 
         self.action_space = spaces.MultiDiscrete([3, 3])
 
     def get_final_obs(self):
-        features = np.zeros((60, 38))
+        features = np.zeros((180, 38))
         if self.prev_features is None:
-            for i in range(59):
+            for i in range(179):
                 obs = self._get_obs()
                 features[i, :] = obs['features']
         else:
@@ -102,17 +102,17 @@ class TradeEnv(gym.Env):
 
         if done:
             print("backtest done")
-            reward = 10 * (pnl - abs(inventory_pnl)) + leverage_punish * 0.001
+            reward = 10 * (pnl - abs(inventory_pnl)) + leverage_punish * 0.005
             if trade_num / self.steps < 0.005:
                 reward -= self.steps / (trade_num + 1)
             self.print_info(reward)
         elif truncated:
             print("backtest truncated")
-            reward = 10 * (pnl - abs(inventory_pnl)) + leverage_punish * 0.001
+            reward = 10 * (pnl - abs(inventory_pnl)) + leverage_punish * 0.005
             self.print_info(reward)
             done = True
         else:
-            reward += leverage_punish * 0.001 - abs(inventory_pnl)
+            reward += leverage_punish * 0.005 - abs(inventory_pnl)
             self.prev_leverage = leverage
             self.prev_inventory_pnl = inventory_pnl
 
