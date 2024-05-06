@@ -80,7 +80,7 @@ class TradeEnv(gym.Env):
         self.steps += 1
         buy_multiplier = action[0]  # 0 - dont change, 1 - re quote, 2 - cancel, 3 - full inventory
         sell_multiplier = action[1]  # 0 - dont change, 1 - re quote, 2 - cancel, 3 - full inventory
-        buy_ticks = 3   # action[2] + 1
+        buy_ticks = 3  # action[2] + 1
         sell_ticks = 3  # action[3] + 1
         obs = self.get_final_obs()
         bid_price = obs['book'].loc['bid_price']
@@ -94,8 +94,13 @@ class TradeEnv(gym.Env):
         leverage = self.info["leverage"]
         trade_num = self.info["trade_count"]
         done = done or not (pnl + min(0, inventory_pnl) > -10 and leverage < 50)
+        leverage_punish = 0
 
-        leverage_punish = 1 - math.pow(2, leverage)
+        try:
+            leverage_punish = 1 - math.pow(2, leverage)
+        except Exception as e:
+            print(e, leverage)
+
         reward = (pnl + min(inventory_pnl, 0) - 1) * self.steps / 7200
 
         if reward < 0 < self.steps // 7200 and self.steps % 7200 == 0:
