@@ -53,10 +53,10 @@ class TradeEnv(gym.Env):
         feature_len = obs.loc[idx].values.shape[0]
         features = np.zeros(feature_len + 4)
         features[:-4] = obs.loc[idx].values
-        features[-1] = inventory_pnl
-        features[-2] = trading_pnl
+        features[-1] = (inventory_pnl - self.prev_inventory_pnl) / 10.0
+        features[-2] = (trading_pnl - self.prev_pnl) / 10.0
         features[-3] = avg_price_pct
-        features[-4] = info["leverage"] / 10.0
+        features[-4] = (info["leverage"] - self.prev_leverage) / 10.0
         return {"book": book, "features": features}
 
     def reset(self, seed=None, options=None):
