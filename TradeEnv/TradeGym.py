@@ -102,7 +102,7 @@ class TradeEnv(gym.Env):
         if self.steps <= 1800:
             self.interval_pnl[self.steps-1] = reward
         else:
-            reward -= self.interval_pnl[0]
+            reward -= self.interval_pnl[0] + 1
             self.interval_pnl[:-1] = self.interval_pnl[1:]
             self.interval_pnl[-1] = reward
 
