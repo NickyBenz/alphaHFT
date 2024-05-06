@@ -95,9 +95,9 @@ class TradeEnv(gym.Env):
         done = done or not (pnl + min(0, inventory_pnl) > -10 and leverage < 50)
 
         leverage_punish = 1 - math.pow(2, leverage)
-        reward = (pnl + min(inventory_pnl, 0) - 0.025) * self.steps / 1800
+        reward = (pnl + min(inventory_pnl, 0) - 1) * self.steps / 7200
 
-        if reward < 0 < self.steps // 1800 and self.steps % 1800 == 0:
+        if reward < 0 < self.steps // 7200 and self.steps % 7200 == 0:
             done = True
 
         if done:
