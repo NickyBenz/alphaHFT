@@ -21,15 +21,15 @@ class TradeEnv(gym.Env):
         self.prev_features = None
         self.observation_space = spaces.Box(-10.0,
                                             10.0,
-                                            shape=(180, 38),
+                                            shape=(30, 38),
                                             dtype=np.float32)
 
         self.action_space = spaces.MultiDiscrete([3, 3])
 
     def get_final_obs(self):
-        features = np.zeros((180, 38))
+        features = np.zeros((30, 38))
         if self.prev_features is None:
-            for i in range(179):
+            for i in range(29):
                 obs = self._get_obs()
                 features[i, :] = obs['features']
         else:
