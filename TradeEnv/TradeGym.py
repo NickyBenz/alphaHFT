@@ -12,6 +12,7 @@ class TradeEnv(gym.Env):
         assert strategy is not None
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.interval_pnl = np.zeros(300)
+        self.trades = np.zeros(300)
         self.verbose = verbose
         self.strategy = strategy
         self.info = {}
@@ -63,7 +64,7 @@ class TradeEnv(gym.Env):
         self.steps = 0
         self.prev_features = None
         self.interval_pnl[:] = 0
-
+        self.trades[:] = 0
         observation = self.get_final_obs()
         self.info = self.strategy.get_info(observation['book'].loc['bid_price'],
                                            observation['book'].loc['ask_price'])
@@ -93,11 +94,16 @@ class TradeEnv(gym.Env):
 
         if self.steps <= 300:
             self.interval_pnl[self.steps-1] = reward
+            self.trades[self.steps-1] = trade_num
         else:
             sum_reward = np.diff(self.interval_pnl).sum()
             self.interval_pnl[:-1] = self.interval_pnl[1:]
             self.interval_pnl[-1] = reward
             reward = sum_reward - 0.05 / 300.0
+            sum_trades = np.diff(self.trades).sum()
+            self.trades[:-1] = self.trades[1:]
+            self.trades[-1] = trade_num
+            reward += 2 - sum_trades
 
         if done:
             print("backtest done")
