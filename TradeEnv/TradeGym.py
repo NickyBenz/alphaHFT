@@ -103,7 +103,7 @@ class TradeEnv(gym.Env):
             sum_trades = np.diff(self.trades).sum()
             self.trades[:-1] = self.trades[1:]
             self.trades[-1] = trade_num
-            reward += 2 - sum_trades
+            reward += min(0, sum_trades - 2)
 
         if done:
             print("backtest done")
