@@ -97,7 +97,7 @@ class TradeEnv(gym.Env):
             sum_reward = np.diff(self.interval_pnl).sum()
             self.interval_pnl[:-1] = self.interval_pnl[1:]
             self.interval_pnl[-1] = reward
-            reward = sum_reward
+            reward = sum_reward - 0.02 / 600.0
 
         if done:
             print("backtest done")
