@@ -94,7 +94,7 @@ class TradeEnv(gym.Env):
         if self.steps <= 60:
             self.interval_pnl[self.steps-1] = reward
         else:
-            sum_reward = self.interval_pnl.mean()
+            sum_reward = np.diff(self.interval_pnl).sum()
             self.interval_pnl[:-1] = self.interval_pnl[1:]
             self.interval_pnl[-1] = reward
             reward = sum_reward
