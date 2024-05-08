@@ -25,35 +25,37 @@ class Strategy:
 
         ds = self.exchange.get_current_observation()
 
-        if buy_multiple == 1 or buy_multiple == 3:
+        if buy_multiple == 1:
             self.exchange.cancel_buys()
             bid_price = ds.loc["bid_price"] - buy_spread * self.instr.tick_size
 
-            if buy_multiple == 1 or self.position.total_qty >= 0:
-                bid_amount = self.instr.quote_amount(buy_multiple * self.base_amount,
-                                                     bid_price)
-            else:
+            if self.position.total_qty < 0 < self.position.inventory_pnl(bid_price):
                 bid_amount = self.instr.quote_amount(abs(self.position.total_qty) / bid_price, bid_price)
+            else:
+                bid_amount = self.instr.quote_amount(buy_multiple * self.base_amount, bid_price)
 
             self.order_id += 1
             self.exchange.quote(self.order_id, True, bid_price, bid_amount)
         elif buy_multiple == 2:
             self.exchange.cancel_buys()
+        else:
+            pass
 
-        if sell_multiple == 1 or sell_multiple == 3:
+        if sell_multiple == 1:
             self.exchange.cancel_sells()
             ask_price = ds.loc["ask_price"] + sell_spread * self.instr.tick_size
 
-            if sell_multiple == 1 or self.position.total_qty <= 0:
-                ask_amount = self.instr.quote_amount(sell_multiple * self.base_amount,
-                                                     ask_price)
-            else:
+            if self.position.total_qty > 0 and self.position.inventory_pnl(ask_price) > 0:
                 ask_amount = self.instr.quote_amount(abs(self.position.total_qty) / ask_price, ask_price)
+            else:
+                ask_amount = self.instr.quote_amount(sell_multiple * self.base_amount, ask_price)
 
             self.order_id += 1
             self.exchange.quote(self.order_id, False, ask_price, ask_amount)
         elif sell_multiple == 2:
             self.exchange.cancel_sells()
+        else:
+            pass
 
         done = self.exchange.next_data()
 

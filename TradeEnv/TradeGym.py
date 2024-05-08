@@ -24,7 +24,7 @@ class TradeEnv(gym.Env):
                                             shape=(120, 40),
                                             dtype=np.float32)
 
-        self.action_space = spaces.Box(low=1, high=10, shape=(2, 1), dtype=np.float32)
+        self.action_space = spaces.MultiDiscrete([3, 3])
 
     def get_final_obs(self):
         features = np.zeros((121, 38))
@@ -82,12 +82,14 @@ class TradeEnv(gym.Env):
     def step(self, action):
         # take actions
         self.steps += 1
-        buy_multiple = int(round(action[1]))
-        sell_multiple = int(round(action[2]))
+        buy_multiplier = action[0]  # 0 - dont change, 1 - re quote, 2 - cancel
+        sell_multiplier = action[1]  # 0 - dont change, 1 - re quote, 2 - cancel
+        buy_ticks = 1  # action[2] + 1
+        sell_ticks = 1  # action[3] + 1
         obs = self.get_final_obs()
         bid_price = obs['book'].loc['bid_price']
         ask_price = obs['book'].loc['ask_price']
-        done = not self.strategy.quote(1, 1, buy_multiple, sell_multiple)
+        done = not self.strategy.quote(buy_ticks, sell_ticks, buy_multiplier, sell_multiplier)
 
         self.info = self.strategy.get_info(bid_price, ask_price)
 

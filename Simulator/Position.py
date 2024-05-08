@@ -19,7 +19,7 @@ class Position:
     def get_info(self, bid_price, ask_price):
         trading_pnl = self.balance - self.initial_balance
         mid_price = 0.5 * (bid_price + ask_price)
-        inventory_pnl = self.instrument.pnl(self.total_qty, self.avg_price, mid_price)
+        inventory_pnl = self.inventory_pnl(mid_price)
 
         info = {"balance": self.balance,
                 "trade_count": self.trade_num,
@@ -33,6 +33,9 @@ class Position:
             info["leverage"] = abs(self.total_qty / self.avg_price) / self.initial_balance
 
         return info
+
+    def inventory_pnl(self, price):
+        return self.instrument.pnl(self.total_qty, self.avg_price, price)
 
     def on_fill(self, order: Order, is_maker) -> None:
         assert (order.state == OrderState.FILLED)
