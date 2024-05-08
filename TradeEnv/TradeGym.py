@@ -75,8 +75,8 @@ class TradeEnv(gym.Env):
         self.steps += 1
         buy_multiplier = action[0]  # 0 - dont change, 1 - re quote, 2 - cancel, 3 - full inventory
         sell_multiplier = action[1]  # 0 - dont change, 1 - re quote, 2 - cancel, 3 - full inventory
-        buy_ticks = 3  # action[2] + 1
-        sell_ticks = 3  # action[3] + 1
+        buy_ticks = 1  # action[2] + 1
+        sell_ticks = 1  # action[3] + 1
         obs = self.get_final_obs()
         bid_price = obs['book'].loc['bid_price']
         ask_price = obs['book'].loc['ask_price']
@@ -107,7 +107,7 @@ class TradeEnv(gym.Env):
 
         if done:
             print("backtest done")
-            reward = 10 * reward + leverage_punish * 0.005
+            reward = 10 * self.interval_pnl[-1] + leverage_punish * 0.005
             self.print_info(reward)
         else:
             reward += leverage_punish * 0.005
