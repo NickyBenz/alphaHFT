@@ -18,26 +18,34 @@ class TradeEnv(gym.Env):
         self.info = {}
         self.steps = 0
         self.prev_features = None
+        self.prev_books = None
         self.observation_space = spaces.Box(-10.0,
                                             10.0,
-                                            shape=(120, 38),
+                                            shape=(120, 40),
                                             dtype=np.float32)
 
-        self.action_space = spaces.MultiDiscrete([4, 4])
+        self.action_space = spaces.Box(low=1, high=10, shape=(2, 1), dtype=np.float32)
 
     def get_final_obs(self):
-        features = np.zeros((120, 38))
+        features = np.zeros((121, 38))
+        books = np.zeros((121, 2))
+
         if self.prev_features is None:
-            for i in range(119):
+            for i in range(120):
                 obs = self._get_obs()
                 features[i, :] = obs['features']
+                books[i, :] = obs['book'].values
         else:
             features[:-1, :] = self.prev_features[1:, :]
+            books[:-1, :] = self.prev_books[1:, :]
 
         obs = self._get_obs()
         features[-1, :] = obs['features']
-        obs['features'] = features
+        books[-1, :] = obs['book'].values
+        feature_differences = np.hstack((features[1:, :], np.diff(books, axis=0)))
+        obs['features'] = feature_differences
         self.prev_features = features
+        self.prev_books = books
         return obs
 
     def _get_obs(self):
@@ -63,6 +71,7 @@ class TradeEnv(gym.Env):
         self.strategy.reset(0)
         self.steps = 0
         self.prev_features = None
+        self.prev_books = None
         self.interval_pnl[:] = 0
         self.trades[:] = 0
         observation = self.get_final_obs()
@@ -73,14 +82,12 @@ class TradeEnv(gym.Env):
     def step(self, action):
         # take actions
         self.steps += 1
-        buy_multiplier = action[0]  # 0 - dont change, 1 - re quote, 2 - cancel, 3 - full inventory
-        sell_multiplier = action[1]  # 0 - dont change, 1 - re quote, 2 - cancel, 3 - full inventory
-        buy_ticks = 1  # action[2] + 1
-        sell_ticks = 1  # action[3] + 1
+        buy_multiple = int(round(action[1]))
+        sell_multiple = int(round(action[2]))
         obs = self.get_final_obs()
         bid_price = obs['book'].loc['bid_price']
         ask_price = obs['book'].loc['ask_price']
-        done = not self.strategy.quote(buy_ticks, sell_ticks, buy_multiplier, sell_multiplier)
+        done = not self.strategy.quote(1, 1, buy_multiple, sell_multiple)
 
         self.info = self.strategy.get_info(bid_price, ask_price)
 
@@ -96,21 +103,22 @@ class TradeEnv(gym.Env):
             self.interval_pnl[self.steps-1] = reward
             self.trades[self.steps-1] = trade_num
         else:
-            sum_reward = np.diff(self.interval_pnl).sum()
+            sum_reward = np.diff(self.interval_pnl).cumsum()
             self.interval_pnl[:-1] = self.interval_pnl[1:]
             self.interval_pnl[-1] = reward
-            reward = sum_reward - 0.05 / 300.0
+            reward = sum_reward[-1] / (1.0 + max(np.max(sum_reward) - sum_reward[-1], 0))
+            reward -= 0.0005
             sum_trades = np.diff(self.trades).sum()
             self.trades[:-1] = self.trades[1:]
             self.trades[-1] = trade_num
-            reward += min(0, sum_trades - 2)
+            reward += min(0, sum_trades - 1) * 10.0
 
         if done:
             print("backtest done")
-            reward = 10 * self.interval_pnl[-1] + leverage_punish * 0.005
+            reward = reward + leverage_punish * 0.01
             self.print_info(reward)
         else:
-            reward += leverage_punish * 0.005
+            reward += leverage_punish * 0.01
 
             if self.steps % self.verbose == 0:
                 self.print_info(reward)
