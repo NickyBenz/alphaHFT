@@ -48,7 +48,7 @@ class TradeSnapshot:
         ts.buy_vol_incr = (self.buy_vol - last_trade.buy_vol) / (1. + self.buy_vol + last_trade.buy_vol)
         ts.sell_vol_incr = (self.sell_vol - last_trade.sell_vol) / (1. + self.sell_vol + last_trade.sell_vol)
         ts.buy_price_incr = (self.buy_price - last_trade.buy_price) / \
-                            (1. + self.buy_price + last_trade.buy_price) * 1000
+                            (1. + self.buy_price)
         ts.sell_price_incr = (self.sell_price - last_trade.sell_price) / \
-                             (1. + self.sell_price + last_trade.sell_price) * 1000
+                             (1. + self.sell_price)
         return ts

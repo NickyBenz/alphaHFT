@@ -19,6 +19,7 @@ class TradeEnv(gym.Env):
         self.steps = 0
         self.prev_features = None
         self.prev_books = None
+        self.next_book = None
         self.observation_space = spaces.Box(-10.0,
                                             10.0,
                                             shape=(120, 40),
@@ -46,6 +47,7 @@ class TradeEnv(gym.Env):
         obs['features'] = feature_differences
         self.prev_features = features
         self.prev_books = books
+        self.next_book = obs['book']
         return obs
 
     def _get_obs(self):
@@ -72,6 +74,7 @@ class TradeEnv(gym.Env):
         self.steps = 0
         self.prev_features = None
         self.prev_books = None
+        self.next_book = None
         self.interval_pnl[:] = 0
         self.trades[:] = 0
         observation = self.get_final_obs()
@@ -86,9 +89,18 @@ class TradeEnv(gym.Env):
         sell_multiplier = action[1]  # 0 - dont change, 1 - re quote, 2 - cancel
         buy_ticks = 1  # action[2] + 1
         sell_ticks = 1  # action[3] + 1
-        obs = self.get_final_obs()
-        bid_price = obs['book'].loc['bid_price']
-        ask_price = obs['book'].loc['ask_price']
+        book = self.next_book
+        bid_price = book.loc['bid_price']
+        ask_price = book.loc['ask_price']
+
+        if self.steps % 10 != 1:
+
+            if buy_multiplier == 1:
+                buy_multiplier = 0
+
+            if sell_multiplier == 1:
+                sell_multiplier = 0
+
         done = not self.strategy.quote(buy_ticks, sell_ticks, buy_multiplier, sell_multiplier)
 
         self.info = self.strategy.get_info(bid_price, ask_price)
@@ -105,11 +117,10 @@ class TradeEnv(gym.Env):
             self.interval_pnl[self.steps-1] = reward
             self.trades[self.steps-1] = trade_num
         else:
-            sum_reward = np.diff(self.interval_pnl).cumsum()
+            sum_reward = np.diff(self.interval_pnl).sum()
             self.interval_pnl[:-1] = self.interval_pnl[1:]
             self.interval_pnl[-1] = reward
-            reward = sum_reward[-1] / (1.0 + max(np.max(sum_reward) - sum_reward[-1], 0))
-            reward -= 0.0005
+            reward = sum_reward - 0.0005
             sum_trades = np.diff(self.trades).sum()
             self.trades[:-1] = self.trades[1:]
             self.trades[-1] = trade_num
@@ -125,6 +136,7 @@ class TradeEnv(gym.Env):
             if self.steps % self.verbose == 0:
                 self.print_info(reward)
 
+        obs = self.get_final_obs()
         return obs['features'], reward, done, False, self.info
 
     def print_info(self, reward):

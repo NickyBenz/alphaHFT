@@ -14,7 +14,10 @@ class BookParser:
                         'bid_sum_diff_0', 'bid_sum_diff_1', 'bid_sum_diff_2',
                         'bid_sum_diff_3', 'bid_sum_diff_4', 'ask_sum_diff_0',
                         'ask_sum_diff_1', 'ask_sum_diff_2', 'ask_sum_diff_3',
-                        'ask_sum_diff_4', 'bid_price', 'ask_price']
+                        'ask_sum_diff_4', 'bid_price', 'ask_price',
+                        'imbalance', 'weighted_imbalance', 'order_book_slope',
+                        'depth_weighted_spread', 'bid_vwap', 'ask_vwap',
+                        'of1', 'of2', 'of3', 'of4']
 
     def parse(self, filename):
         output_file = self.temp_folder + "modified_" + os.path.basename(filename)
